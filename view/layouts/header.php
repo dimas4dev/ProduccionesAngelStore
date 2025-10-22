@@ -40,6 +40,8 @@ $usuario = $usuario ?? null;
             color: white;
             padding: 1rem 0;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            grid-column-start: 2;
+            grid-column-end: 12;
         }
 
         .header-container {
@@ -146,6 +148,7 @@ $usuario = $usuario ?? null;
                     <?php else: ?>
                         <li><a href="index.php?controller=auth&action=login">🔐 Iniciar Sesión</a></li>
                     <?php endif; ?>
+                    <li><a href="index.php?controller=auth&action=register">👤 Registrate</a></li>
                 </ul>
             </nav>
             <?php if ($usuario): ?>

@@ -39,6 +39,11 @@ try {
                 case 'logout':
                     $authController->logout();
                     break;
+                case 'register':
+                    $titulo = 'Register - Producciones Angel';
+                    $css_file = 'view/register/register.css';
+                    $authController->register();
+                    break;
                 default:
                     header('Location: index.php?controller=auth&action=login');
                     exit;

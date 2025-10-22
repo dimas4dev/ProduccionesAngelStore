@@ -127,23 +127,50 @@ class Usuario {
     /**
      * Crea un nuevo usuario
      * @param array $datos Datos del usuario
-     * @return bool True si se creó correctamente
+     * @return array Resultado con 'success' y 'message'
      */
     public function crear($datos) {
-        // Hash de la contraseña
-        $claveHasheada = password_hash($datos['clave'], PASSWORD_DEFAULT);
-        
-        $sql = "INSERT INTO usuarios (nombre, email, clave, direccion, telefono, role) VALUES (?, ?, ?, ?, ?, ?)";
-        $resultado = $this->db->ejecutarConsultaPreparada($sql, [
-            $datos['nombre'],
-            $datos['email'],
-            $claveHasheada,
-            $datos['direccion'] ?? null,
-            $datos['telefono'] ?? null,
-            $datos['role'] ?? 'cliente'
-        ]);
-        
-        return $resultado !== false;
+        try {
+            // Validar que el email no exista
+            if ($this->emailExiste($datos['email'])) {
+                return [
+                    'success' => false,
+                    'message' => 'El email ya está registrado. Por favor, usa otro email.'
+                ];
+            }
+
+            // Hash de la contraseña
+            $claveHasheada = password_hash($datos['clave'], PASSWORD_DEFAULT);
+            
+            $sql = "INSERT INTO usuarios (nombre, email, clave, direccion, telefono, role) VALUES (?, ?, ?, ?, ?, ?)";
+            $resultado = $this->db->ejecutarConsultaPreparada($sql, [
+                $datos['nombre'],
+                $datos['email'],
+                $claveHasheada,
+                $datos['direccion'] ?? null,
+                $datos['telefono'] ?? null,
+                $datos['role'] ?? 'cliente'
+            ]);
+            
+            if ($resultado) {
+                return [
+                    'success' => true,
+                    'message' => 'Usuario registrado exitosamente. Ya puedes iniciar sesión.'
+                ];
+            } else {
+                return [
+                    'success' => false,
+                    'message' => 'Error al crear el usuario. Por favor, intenta nuevamente.'
+                ];
+            }
+            
+        } catch (Exception $e) {
+            error_log("Error al crear usuario: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Error interno del servidor. Por favor, intenta más tarde.'
+            ];
+        }
     }
 
     /**
@@ -301,6 +328,53 @@ class Usuario {
      */
     public function esCliente() {
         return $this->role === 'cliente';
+    }
+
+    /**
+     * Valida los datos de registro
+     * @param array $datos Datos a validar
+     * @return array Array con errores de validación (vacío si no hay errores)
+     */
+    public function validarDatosRegistro($datos) {
+        $errores = [];
+
+        // Validar nombre
+        if (empty(trim($datos['nombre']))) {
+            $errores[] = "El nombre es obligatorio";
+        } elseif (strlen(trim($datos['nombre'])) < 2) {
+            $errores[] = "El nombre debe tener al menos 2 caracteres";
+        }
+
+        // Validar email
+        if (empty(trim($datos['email']))) {
+            $errores[] = "El email es obligatorio";
+        } elseif (!filter_var($datos['email'], FILTER_VALIDATE_EMAIL)) {
+            $errores[] = "El formato del email no es válido";
+        }
+
+        // Validar contraseña
+        if (empty($datos['clave'])) {
+            $errores[] = "La contraseña es obligatoria";
+        } elseif (strlen($datos['clave']) < 6) {
+            $errores[] = "La contraseña debe tener al menos 6 caracteres";
+        }
+
+        // Validar confirmación de contraseña
+        if (empty($datos['confirmar_clave'])) {
+            $errores[] = "Debes confirmar tu contraseña";
+        } elseif ($datos['clave'] !== $datos['confirmar_clave']) {
+            $errores[] = "Las contraseñas no coinciden";
+        }
+
+        // Validar teléfono (opcional pero si se proporciona debe ser válido)
+        if (!empty($datos['telefono'])) {
+            $telefono = preg_replace('/[^0-9+\-\(\)\s]/', '', $datos['telefono']);
+            if (strlen($telefono) < 7) {
+                $errores[] = "El teléfono debe tener al menos 7 dígitos";
+            }
+        }
+
+        return $errores;
     }
 
     /**

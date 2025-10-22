@@ -65,6 +65,44 @@ class AuthController {
     }
 
     /**
+     * Procesa el registro del usuario
+     */
+
+    public function register() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $datos = [
+                'nombre' => trim($_POST['nombre'] ?? ''),
+                'email' => trim($_POST['email'] ?? ''),
+                'clave' => $_POST['clave'] ?? '',
+                'confirmar_clave' => $_POST['confirmar_clave'] ?? '',
+                'direccion' => trim($_POST['direccion'] ?? ''),
+                'telefono' => trim($_POST['telefono'] ?? ''),
+                'role' => 'cliente'
+            ];
+
+            // Validar datos usando el método del modelo
+            $errores = $this->usuario->validarDatosRegistro($datos);
+
+            if (empty($errores)) {
+                $resultado = $this->usuario->crear($datos);
+
+                if ($resultado['success']) {
+                    $this->mostrarExito($resultado['message']);
+                    $this->mostrarFormularioRegister();
+                } else {
+                    $this->mostrarError($resultado['message']);
+                    $this->mostrarFormularioRegister();
+                }
+            } else {
+                $this->mostrarErrores($errores);
+                $this->mostrarFormularioRegister();
+            }
+        } else {
+            $this->mostrarFormularioRegister();
+        }
+    }
+
+    /**
      * Cierra la sesión del usuario
      */
     public function logout() {
@@ -156,10 +194,10 @@ class AuthController {
     private function redirigirSegunRol($role) {
         switch ($role) {
             case 'administrador':
-                header('Location: admin.php');
+                header('Location: index.php?controller=admin');
                 break;
             case 'cliente':
-                header('Location: cliente.php');
+                header('Location: index.php?controller=cliente');
                 break;
             default:
                 header('Location: index.php');
@@ -173,6 +211,23 @@ class AuthController {
      */
     private function mostrarFormularioLogin() {
         $this->cargarVista('login');
+    }
+
+    /**
+     * Muestra el formulario de registro
+     */
+    private function mostrarFormularioRegister() {
+        $this->cargarVista('register');
+    }
+
+    /**
+     * Muestra un mensaje de éxito
+     * @param string $mensaje Mensaje de éxito
+     */
+    private function mostrarExito($mensaje) {
+        echo "<div class='alert alert-success'>";
+        echo "<strong>Éxito:</strong> " . htmlspecialchars($mensaje);
+        echo "</div>";
     }
 
     /**
@@ -231,9 +286,11 @@ class AuthController {
         // Extraer variables del array de datos
         extract($datos);
         
+        // Configurar título y CSS según la vista
+        $titulo = ($vista === 'register') ? 'Registro - Producciones Angel' : 'Login - Producciones Angel';
+        $css_file = 'view/' . $vista . '/' . $vista . '.css';
+        
         // Incluir header común
-        $titulo = 'Login - Producciones Angel';
-        $css_file = 'view/login/login.css';
         include __DIR__ . '/../view/layouts/header.php';
         
         // Cargar la vista específica
